@@ -15,7 +15,7 @@ const char *vehicle_password = "0001"; // =/null / unical
 
 WiFiUDP udp;
 bool authenticated = false;
-
+bool serverIsNotResponding = false;
 void setup() {
       Serial.begin(115200);
       Serial.println("Connect to WiFi...");
@@ -47,15 +47,50 @@ void setup() {
 }
 
 void loop() {
-  if (!authenticated) {
-    // Выполнение процедуры аутентификации
-    Serial.println("Выполнение процедуры аутентификации");
-    authenticate();
-  } else {
-    // Отправка координат
-    Serial.println("Отправка координат");
-    sendCoordinates();
+  if(!serverIsNotResponding)
+  { 
     delay(5000); // Пауза между отправками
+    checkingServer();
+  }
+  else{
+    if (!authenticated) {
+        // Выполнение процедуры аутентификации
+        Serial.println("Выполнение процедуры аутентификации");
+        authenticate();
+    } else {
+        // Отправка координат
+        Serial.println("Отправка координат");
+        sendCoordinates();
+        delay(5000); // Пауза между отправками
+    }
+  }
+}
+
+void checkingServer()
+{
+  // Отправка запроса аутентификации на сервер
+  udp.beginPacket(host, port);
+  udp.print("PING:");
+  udp.endPacket();
+  
+  delay(2000); // Пауза между отправками
+  // Ожидание ответа от сервера
+  char buffer[255];
+  int packetSize = udp.parsePacket();
+  if (packetSize) {
+    int len = udp.read(buffer, sizeof(buffer));
+    if (len > 0) {
+      buffer[len] = 0;
+      if (strcmp(buffer, "PONG") == 0) {
+        serverIsNotResponding = true;
+        Serial.println("Сервер работает!");
+      } else {
+        Serial.println("WARNING! Сервер не отваечат!!!");
+      }
+    }
+  }
+  else{
+    Serial.println("WARNING! Сервер не включен!!!");
   }
 }
 
@@ -84,6 +119,7 @@ void authenticate() {
       }
     }
   }
+  else serverIsNotResponding = true;
 }
 
 void sendCoordinates() {
@@ -124,9 +160,18 @@ void sendCoordinates() {
       buffer[len] = 0;
       if (strcmp(buffer, "GEOLOCATIONSET") == 0) {
         Serial.println("Данные успешно отправленны");
+      }
+      else if (strcmp(buffer, "NOT_AUTH") == 0) {
+        Serial.println("WARNING! Данные не отравлены!!! Вы не авторизированы!");
+        authenticated = false;
       } else {
-        Serial.println("Поссылка где-то гуляет, но до сервера так и не дошла((");
+        Serial.println("WARNING! Поссылка где-то гуляет, но до сервера так и не дошла((");
       }
     }
+  }
+  else{
+    Serial.println("WARNING! Server не отвечает!");
+    authenticated = false;
+    serverIsNotResponding = true;
   }
 }
