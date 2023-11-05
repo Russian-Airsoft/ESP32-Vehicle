@@ -42,7 +42,7 @@ void setup() {
 
     // put your setup code here, to run once:
     Serial.println(F("Sats HDOP  Latitude   Longitude   Fix  Date       Time     Date Alt    Course Speed Card  Distance Course Card  Chars Sentences Checksum Odometer"));
-    Serial.println(F("           (deg)      (deg)       Age  23.10.2023 14:15    Age  (m)    --- from GPS ----  ---- to Point   ----  RX    RX        Fail"));
+    Serial.println(F("           (deg)      (deg)       Age  05.11.2023 17:46    Age  (m)    --- from GPS ----  ---- to Point   ----  RX    RX        Fail"));
     Serial.println(F("----------------------------------------------------------------------------------------------------------------------------------------"));
 }
 
@@ -55,6 +55,7 @@ void loop() {
   else{
     if (!authenticated) {
         // Выполнение процедуры аутентификации
+        delay(1000); // Пауза между отправками
         Serial.println("Выполнение процедуры аутентификации");
         authenticate();
     } else {
@@ -73,7 +74,7 @@ void checkingServer()
   udp.print("PING:");
   udp.endPacket();
   
-  delay(2000); // Пауза между отправками
+  delay(1000); // Пауза между отправками
   // Ожидание ответа от сервера
   char buffer[255];
   int packetSize = udp.parsePacket();
@@ -84,8 +85,41 @@ void checkingServer()
       if (strcmp(buffer, "PONG") == 0) {
         serverIsNotResponding = true;
         Serial.println("Сервер работает!");
+        checkingAuth();
       } else {
         Serial.println("WARNING! Сервер не отваечат!!!");
+      }
+    }
+  }
+  else{
+    Serial.println("WARNING! Сервер не включен!!!");
+  }
+}
+
+void checkingAuth()
+{
+  // Отправка запроса аутентификации на сервер
+  udp.beginPacket(host, port);
+  udp.print("CHECK_AUTH:");
+  udp.endPacket();
+  
+  delay(1000); // Пауза между отправками
+  // Ожидание ответа от сервера
+  char buffer[255];
+  int packetSize = udp.parsePacket();
+  if (packetSize) {
+    int len = udp.read(buffer, sizeof(buffer));
+    if (len > 0) {
+      buffer[len] = 0;
+      if (strcmp(buffer, "AUTHENTICATED") == 0) {
+        serverIsNotResponding = true;
+        Serial.println("Проверка авторизации - Авторизован!");
+        authenticated = true;
+      }
+      else if (strcmp(buffer, "NOT_AUTH") == 0) {
+        Serial.println("Проверка авторизации - Не авторизован!");
+        authenticated = false;
+        authenticate();
       }
     }
   }
@@ -103,7 +137,7 @@ void authenticate() {
   udp.print(vehicle_password);
   udp.endPacket();
   
-  delay(200); // Пауза между отправками
+  delay(1000); // Пауза между отправками
   // Ожидание ответа от сервера
   char buffer[255];
   int packetSize = udp.parsePacket();
@@ -171,7 +205,6 @@ void sendCoordinates() {
   }
   else{
     Serial.println("WARNING! Server не отвечает!");
-    authenticated = false;
     serverIsNotResponding = true;
   }
 }
