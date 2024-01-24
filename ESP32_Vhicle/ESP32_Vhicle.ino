@@ -2,9 +2,12 @@
 #include <WiFiUdp.h>
 
 /*Settings Wifi*/
-const char *ssid = "TP-Link_7743";
-const char *password = "551551551";
-
+/*In Home*/
+//const char *ssid = "TP-Link_7743";
+//const char *password = "551551551";
+/*In Car*/
+const char *ssid = "Lada_2114";
+const char *password = "53YGRE2x";
 /*Settings Server*/
 const IPAddress host(192,168,0,193); //IP Vhicel Server
 const uint16_t port = 40054; //Port Vhicel Server
